@@ -292,11 +292,6 @@ function escapeHtml(str){
 return (str || "").toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-if(TOTAL_TAPS >= 16) document.body.classList.add("dense");
-
-document.getElementById("grid").style.gridTemplateColumns = `repeat(${GRID_COLS},1fr)`;
-document.getElementById("grid").style.gridTemplateRows = `repeat(${GRID_ROWS},1fr)`;
-
 cargarDatos();
 setInterval(cargarDatos, REFRESH_MS);
 
