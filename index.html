@@ -54,8 +54,6 @@ opacity:0.95;
 .grid{
 flex:1;
 display:grid;
-grid-template-columns:repeat(3,1fr);
-grid-template-rows:repeat(4,1fr);
 gap:1vh 1.6vw;
 padding:0 3vw 1.6vh;
 min-height:0;
@@ -137,6 +135,33 @@ position:fixed;bottom:0.6vh;right:1vw;
 font-size:0.65rem;color:rgba(244,236,218,0.35);
 font-family:'Inter',sans-serif;
 }
+
+/* Modo compacto: se activa solo cuando hay 16 taps (?taps=16) */
+body.dense .card{
+padding:0.5vh 0.9vw;
+}
+body.dense .beer-name{
+font-size:clamp(0.85rem,1.25vw,1.25rem);
+}
+body.dense .brand-name{
+font-size:clamp(0.65rem,0.8vw,0.8rem);
+}
+body.dense .brand-logo{
+height:clamp(26px,3vw,40px);
+max-width:14vw;
+}
+body.dense .detail{
+font-size:clamp(0.62rem,0.7vw,0.75rem);
+margin:0.3vh 0 0.2vh;
+}
+body.dense .desc{
+font-size:clamp(0.6rem,0.68vw,0.72rem);
+-webkit-line-clamp:1;
+}
+body.dense .banner{
+font-size:clamp(1.6rem,3.2vw,2.6rem);
+padding:0.3em 0.8em;
+}
 </style>
 </head>
 <body>
@@ -158,8 +183,9 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlLXc0RGlYM69x
 // Cada cuánto se vuelve a leer la hoja (milisegundos). 5 minutos por defecto.
 const REFRESH_MS = 5 * 60 * 1000;
 
-// Cantidad de bloques fijos en la pizarra (3 columnas x 4 filas)
-const TOTAL_TAPS = 12;
+// La cantidad de taps a mostrar (12 en grilla 3x4, o 16 en grilla 4x4) se
+// detecta sola según cuántas cervezas estén marcadas Disponible=SI en la hoja.
+// Si hay más de 12 disponibles, pasa automáticamente a la grilla de 16.
 
 // Carpeta donde están los logos de cada marca (mismo repo, junto a este archivo)
 const LOGOS_FOLDER = "Assets/logos/";
@@ -185,6 +211,17 @@ for(const k in row){ out[normalizar(k)] = row[k]; }
 return out;
 }
 
+function aplicarGrilla(cantidadDisponibles){
+const total = cantidadDisponibles > 12 ? 16 : 12;
+const cols = total >= 16 ? 4 : 3;
+const rows = Math.ceil(total / cols);
+document.body.classList.toggle("dense", total >= 16);
+const grid = document.getElementById("grid");
+grid.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+grid.style.gridTemplateRows = `repeat(${rows},1fr)`;
+return total;
+}
+
 async function cargarDatos(){
 try{
 const res = await fetch(CSV_URL + (CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
@@ -192,7 +229,8 @@ const text = await res.text();
 const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
 const filasNorm = parsed.data.map(normalizarClaves);
 const filas = filasNorm.filter(row => esDisponible(row["disponible"]));
-render(filas);
+const totalTaps = aplicarGrilla(filas.length);
+render(filas, totalTaps);
 document.getElementById("updated").textContent =
 "Actualizado " + new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'}) +
 " — " + parsed.data.length + " filas le\u00eddas, " + filas.length + " disponibles";
@@ -209,11 +247,11 @@ if(row[key] !== undefined && row[key] !== "") return row[key];
 return "";
 }
 
-function render(filas){
+function render(filas, totalTaps){
 const grid = document.getElementById("grid");
 grid.innerHTML = "";
 
-for(let i = 0; i < TOTAL_TAPS; i++){
+for(let i = 0; i < totalTaps; i++){
 const row = filas[i];
 const card = document.createElement("div");
 
@@ -253,6 +291,11 @@ grid.appendChild(card);
 function escapeHtml(str){
 return (str || "").toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+if(TOTAL_TAPS >= 16) document.body.classList.add("dense");
+
+document.getElementById("grid").style.gridTemplateColumns = `repeat(${GRID_COLS},1fr)`;
+document.getElementById("grid").style.gridTemplateRows = `repeat(${GRID_ROWS},1fr)`;
 
 cargarDatos();
 setInterval(cargarDatos, REFRESH_MS);
